@@ -1,0 +1,9 @@
+pystan==2.19.1.1   
+prophet==1.1.2
+seaborn
+matplotlib
+holidays
+sqlalchemy
+pandas
+plotly
+openpyxl
