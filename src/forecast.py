@@ -8,6 +8,7 @@
 
 import io
 import holidays
+import numpy as np
 import pandas as pd
 import matplotlib as mlp
 from prophet import Prophet
@@ -46,7 +47,16 @@ class Predictor:
     
     @property
     def forecast_data(self):        
-        return self.forecast[['ds','yhat']]
+        dataset = self.forecast[['ds','yhat']]
+        dataset['yhat'] = dataset['yhat'].map(int)
+        return dataset 
+    
+    @property
+    def accuracy(self):
+        """ check model accuracy """
+        return np.mean(
+            np.abs(self.forecast['yhat'] - self.dataset['y']) / self.dataset['y']
+        )
         
     @trace 
     def add_seasonality(self):
@@ -92,6 +102,9 @@ class Predictor:
         dataset = pd.merge(self.actual_data, self.forecast_data, on='ds')
         dataset['actual_vs_forecast'] = (dataset['y'] - dataset['yhat']) / dataset['y'] * 100
         dataset = dataset.rename(columns={"y": "actual_2020", "yhat": "forecast_2020"}) 
+        dataset['ds'] = pd.to_datetime(dataset['ds'], format="%d/%m/%Y")
+        dataset = dataset.sort_values('ds')
+        dataset = dataset.reset_index(drop=True)
         dataset.to_excel(RESULT_FILE_PATH, index=False)
     
     @trace
@@ -108,10 +121,11 @@ class Predictor:
         rmse = self.performance['rmse'].mean()
         mape = self.performance['mape'].mean()
         
-        logger.info(f"INFO:Mean Absolute Error (MAE): {mae * 100:.2f}%")
-        logger.info(f"INFO:Mean Squared Error (MSE): {mse * 100:.2f}%")
-        logger.info(f"INFO:Root Mean Squared Error (RMSE): {rmse * 100:.2f}%")
-        logger.info(f"INFO:Mean Absolute Percentage Error (MAPE): {mape * 100:.2f}%")
+        logger.info(f"INFO: Accuracy: {self.accuracy * 100:.2f}%")
+        logger.info(f"INFO: Mean Absolute Error (MAE): {mae * 100:.2f}%")
+        logger.info(f"INFO: Mean Squared Error (MSE): {mse * 100:.2f}%")
+        logger.info(f"INFO: Root Mean Squared Error (RMSE): {rmse * 100:.2f}%")
+        logger.info(f"INFO: Mean Absolute Percentage Error (MAPE): {mape * 100:.2f}%")
 
     @trace
     def run(self):
